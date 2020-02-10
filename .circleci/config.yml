@@ -250,7 +250,6 @@ jobs:
           command: |
             git submodule sync
             git submodule update --init --recursive
-            mkdir -p ~/skip/build
       - run:
           name: system status
           command: |
@@ -261,8 +260,6 @@ jobs:
             echo Versions
             echo $(which gcc) - $(gcc --version | head -1)
             echo $(which clang) - $(clang --version | head -1)
-            echo $(which cmake) - $(cmake --version | head -1)
-            echo $(which ninja) - $(ninja --version | head -1)
             echo $(which brew) - $(brew --version | head -1)
             echo
             echo Processor Count: $(sysctl -n hw.ncpu)
@@ -278,24 +275,21 @@ jobs:
       - run:
           name: install prerequisites
           command: |
-            for item in ninja cmake dwarfutils libelf boost gflags glog jemalloc autoconf automake pkg-config libtool; do
+            for item in autoconf automake pkg-config libtool; do
             brew info "${item}" | grep -q 'Not installed' && brew install "${item}"
             done
       - run:
           name: configure
           working_directory: ~/skip/build
-          command: | # Fix for broken hombrew cmake 1.15.3  Homebrew path for ICU.
-            cmake .. -DBoost_NO_BOOST_CMAKE=ON              -DICU_HINT=/usr/local/opt/icu4c
+          command: |
+            ./build_submodules
+	    ./configure
 
-      - run:
-          name: compile runtimes
-          working_directory: ~/skip/build
-          command: ninja skip_runtime.lkg.dep skip_runtime.src.dep skip_runtime.tests.dep
       - run:
           name: smoke test
           command: |
             ulimit -c 0
-            ninja -C build -k 0 mac_smoke_test
+            make -j 4
       - run:
           name: analyze test results
           when: always
