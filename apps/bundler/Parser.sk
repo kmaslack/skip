@@ -13,43 +13,76 @@ fun parse(text: String): ParserResult {
   Parser::new(text).getRequires();
 }
 
+fun dbg(t: String): void {
+    debug(t);
+}
+
+fun dbgchar(c: ?Char): void {
+    c match {
+        |None() -> debug("**NaC**");
+        |Some(char) -> debug(String::fromChars(Array[char]));
+    }
+}
+
 // Private parser class for demonstration purposes - a production version would
 // need a more robust parser.
 private mutable class Parser private (
   text: String,
-  iterator: mutable String.StringIterator,
-  mutable current: Int,
-  mutable lastRequire: Int,
+  current: mutable String.StringIterator,
+  mutable lengthSoFar: Int,
+  mutable lastRequire: String.StringIterator,
   requires: mutable Vector<String>,
 ) {
   static fun new(text: String): mutable this {
-    iterator = String.StringIterator::make(text);
-    mutable static(text, iterator, 0, 0, mutable Vector[])
+    current = String.StringIterator::make(text);
+    dbg("new parser! ");
+    dbg(text.sub(current, 10));
+    dbg("...");
+    mutable static(
+        text,
+        current,
+        0,
+        freeze(current),
+        mutable Vector[]
+    )
   }
 
   mutable fun getRequires(): ParserResult {
     this.parse();
     remainingText = this.text.sub(
       this.lastRequire,
-      this.text.length() - this.lastRequire,
+      this.text.length() - this.lengthSoFar,
     );
+    dbg("getRequires: ");
+    dbg(remainingText);
     ParserResult{requires => freeze(this.requires), remainingText}
   }
 
-  private mutable fun next(): (Int, ?Char) {
-    result = (this.current, this.iterator.next());
-    this.!current = this.current + 1;
-    result
+  private mutable fun next(): (String.StringIterator, ?Char) {
+    dbg("next() {");
+    before = freeze(this.current);
+    c = this.current.next();
+    dbg(this.lengthSoFar.toString());
+    dbg("returning substr: " + this.text.sub(before, 1) + "...");
+    dbg("next() } ");
+
+    this.!lengthSoFar = this.lengthSoFar + 1;
+    (before, c);
   }
 
   private mutable fun parse(): void {
-    (position, char) = this.next();
+    (_, char) = this.next();
     char match {
     | None() -> void
     | Some('r') ->
-      first = position;
-      last = this.parseKeyword();
-      if (this.text.sub(first, last - first) == "require") {
+      startPos = this.lengthSoFar;
+      first = this.current;
+      this.parseKeyword();
+      len = this.lengthSoFar - startPos;
+      s = this.text.sub(first, len);
+      if (s == "require") {
+        dbg("parse: -->");
+        dbg(s);
         filename = this.parseRequire();
         this.requires.push(filename);
       };
@@ -58,13 +91,12 @@ private mutable class Parser private (
     };
   }
 
-  private mutable fun parseKeyword(): Int {
-    (position, char) = this.next();
-    char match {
-    | Some(x) if (x >= 'a' && x <= 'z' || x >= 'A' && x <= 'Z') ->
-      this.parseKeyword()
-    | _ -> position
-    }
+  private mutable fun parseKeyword(): void {
+          (_, char) = this.next();
+          char match {
+          | Some(x) if (x >= 'a' && x <= 'z' || x >= 'A' && x <= 'Z') -> void
+          | _ -> this.parseKeyword()
+          }
   }
 
   private mutable fun parseRequire(): String {
@@ -74,14 +106,16 @@ private mutable class Parser private (
     };
     (first, !char) = this.next();
     last = first;
+    span = 0;
     while (char != None() && char != Some('\'')) {
+      !span = span + 1;
       (!last, !char) = this.next()
     };
-    result = this.text.sub(first, last - first);
+    result = this.text.sub(first, span);
     while (char != None() && char != Some('\n')) {
       (!last, !char) = this.next()
     };
-    this.!lastRequire = last + 1;
+    this.!lastRequire = last;
     result
   }
 }
