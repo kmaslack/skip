@@ -18,38 +18,45 @@ fun parse(text: String): ParserResult {
 private mutable class Parser private (
   text: String,
   iterator: mutable String.StringIterator,
-  mutable current: Int,
-  mutable lastRequire: Int,
+  mutable lengthSoFar: Int,
+  mutable lastRequire: mutable String.StringIterator,
   requires: mutable Vector<String>,
 ) {
   static fun new(text: String): mutable this {
     iterator = String.StringIterator::make(text);
-    mutable static(text, iterator, 0, 0, mutable Vector[])
+    mutable static(
+        text,
+        iterator,
+        0,
+        iterator,
+        mutable Vector[]
+    )
   }
 
   mutable fun getRequires(): ParserResult {
     this.parse();
     remainingText = this.text.sub(
       this.lastRequire,
-      this.text.length() - this.lastRequire,
+      this.text.length() - this.lengthSoFar,
     );
     ParserResult{requires => freeze(this.requires), remainingText}
   }
 
-  private mutable fun next(): (Int, ?Char) {
-    result = (this.current, this.iterator.next());
-    this.!current = this.current + 1;
-    result
+  private mutable fun next(): (mutable String.StringIterator, ?Char) {
+    this.!lengthSoFar = this.lengthSoFar + 1;
+    (this.iterator, this.iterator.next())
   }
 
   private mutable fun parse(): void {
-    (position, char) = this.next();
+    (_, char) = this.next();
     char match {
     | None() -> void
     | Some('r') ->
-      first = position;
-      last = this.parseKeyword();
-      if (this.text.sub(first, last - first) == "require") {
+      startPos = this.lengthSoFar;
+      first = this.iterator;
+      this.parseKeyword();
+      len = this.lengthSoFar - startPos;
+      if (this.text.sub(first, len) == "require") {
         filename = this.parseRequire();
         this.requires.push(filename);
       };
@@ -58,13 +65,12 @@ private mutable class Parser private (
     };
   }
 
-  private mutable fun parseKeyword(): Int {
-    (position, char) = this.next();
-    char match {
-    | Some(x) if (x >= 'a' && x <= 'z' || x >= 'A' && x <= 'Z') ->
-      this.parseKeyword()
-    | _ -> position
-    }
+  private mutable fun parseKeyword(): void {
+          (_, char) = this.next();
+          char match {
+          | Some(x) if (x >= 'a' && x <= 'z' || x >= 'A' && x <= 'Z') -> void
+          | _ -> this.parseKeyword()
+          }
   }
 
   private mutable fun parseRequire(): String {
@@ -74,14 +80,16 @@ private mutable class Parser private (
     };
     (first, !char) = this.next();
     last = first;
+    span = 0;
     while (char != None() && char != Some('\'')) {
+      !span = span + 1;
       (!last, !char) = this.next()
     };
-    result = this.text.sub(first, last - first);
+    result = this.text.sub(first, span);
     while (char != None() && char != Some('\n')) {
       (!last, !char) = this.next()
     };
-    this.!lastRequire = last + 1;
+    this.!lastRequire = last;
     result
   }
 }
