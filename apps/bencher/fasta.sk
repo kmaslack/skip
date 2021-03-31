@@ -157,7 +157,7 @@ fun bench(bencher: Bencher): Bencher.BenchmarkStats {
     "AGGCGGAGGTTGCAGTGAGCCGAGATCGCGCCACTGCACTCC" +
     "AGCCTGGGCGACAGAGCGAGACTCCGTCTCAAAAA";
 
-  alu = Array::fillBy(alu_string.length(), i -> alu_string[i]);
+  alu = Array::fillBy(alu_string.length(), i -> alu_string.chars()[i]);
 
   iub = mutable Vector[];
   for (item in Array[

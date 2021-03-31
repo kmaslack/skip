@@ -8,6 +8,10 @@
 // Adapted from https://benchmarksgame-team.pages.debian.net/benchmarksgame/program/regexredux-node-2.html
 module RegexRedux;
 
+untracked fun getInput(): String {
+    FileSystem.readTextFile("regex-redux-input.txt")
+}
+
 fun iteratorSize<T>(iterator: mutable Iterator<T>): Int {
   i = 0;
   while (
@@ -27,11 +31,11 @@ fun createRegex(str: String): (String, Regex) {
 
 @bench
 fun bench(bencher: Bencher): Bencher.BenchmarkStats {
-  input = "";
   results = Vector::mcreate(9);
+  input = getInput();
   bencher.bench{
     run => () -> {
-      !input = FileSystem.readTextFile("regex-redux-input.txt").replaceRegex(
+      !input = input.replaceRegex(
         Regex::create("^>.*\n|\n", "m"),
         _ -> "",
       );

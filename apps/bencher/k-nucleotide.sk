@@ -8,9 +8,13 @@
 // Adapted from https://benchmarksgame-team.pages.debian.net/benchmarksgame/program/knucleotide-hack-4.html
 module KNucleotide;
 
+untracked fun fetchSequenceString(): String {
+    FileSystem.readTextFile("./k-nucleotide-input.txt")
+}
+
 @bench
-fun bench(bencher: Bencher): Bencher.BenchmarkStats {
-  sequence = read_sequence(FileSystem.readTextFile("./k-nucleotide-input.txt"));
+fun bench(bencher: Bencher, sequence: String): Bencher.BenchmarkStats {
+  !sequence = read_sequence(sequence);
   bencher.bench{
     run => () -> {
       _ = write_freq(sequence, 1);
